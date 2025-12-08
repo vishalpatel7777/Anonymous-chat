@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/style.css" rel="stylesheet" />
+    <title>Anonymous-Chat</title>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="chat-container">
+        <h1>Anonymous Chat</h1>
+        <div class="messages" id="messageArea"></div>
+        <div class="input-container">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type your message.."
+          />
+          <button id="send-button">Send</button>
+        </div>
+      </div>
+      
+      <aside class="users-sidebar">
+        <h2>Active Users</h2>
+        <div id="usersList"></div>
+      </aside>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chat.js"></script>
+  </body>
+</html>
