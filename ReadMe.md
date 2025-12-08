@@ -141,7 +141,7 @@ This app is deployed on [Render](https://render.com) and is live at:
 ## 📸 Screenshots
 
 ### Chat Interface
-![Chat Interface]('./images/chat-interface.png')
+![Chat Interface](images/chat-interface.png)
 
 ---
 
