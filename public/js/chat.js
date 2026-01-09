@@ -10,6 +10,23 @@ const usersList = document.querySelector('#usersList');
 // Store connected users
 let connectedUsers = new Set();
 
+// Request notification permission on load
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// Show browser notification
+function showNotification(title, options = {}) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, {
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%234CAF50"/><text x="50" y="60" font-size="50" text-anchor="middle" fill="white" font-weight="bold">💬</text></svg>',
+      ...options
+    });
+  }
+}
+
 // add regular message
 function addMessage(message, sender, senderId = null){
   const messageDiv = document.createElement('div');
@@ -121,26 +138,37 @@ socket.on('message-from-server', (data) => {
   } else {
     // New format - object with message and senderId
     addMessage(data.message, 'server', data.senderId);
+    // Show notification for new message from other users
+    showNotification('New Message', {
+      body: `${data.senderId.substring(0, 8)}...: ${data.message.substring(0, 50)}${data.message.length > 50 ? '...' : ''}`
+    });
   }
 });
 
-// send message to server on button click
+// send message to server on button click or Enter key
 function sendMessage(){
   const message = messageInput.value.trim();
   if(message){
     socket.emit('message-from-client', message);
     addMessage(message, 'client');
     messageInput.value = '';
+    // Optional: Show notification for your own message
+    showNotification('Message Sent', {
+      body: message.substring(0, 50) + (message.length > 50 ? '...' : '')
+    });
   }
 }
 
+// Send on button click
+sendButton.addEventListener('click', sendMessage);
+
+// Send on Enter key press
 messageInput.addEventListener('keypress', (e) => {
   if(e.key === 'Enter'){
+    e.preventDefault(); // Prevent default form submission behavior
     sendMessage();
   }
 });
-
-sendButton.addEventListener('click', sendMessage);
 
 socket.on('greeting', (msg, ackCallback) => {
     console.log('Greeting from server: ', msg);
@@ -151,6 +179,7 @@ socket.on('greeting', (msg, ackCallback) => {
     });
 });
 
-// Initialize - add current user
+// Initialize - add current user and request notification permission
 connectedUsers.add(socket.id);
 updateUsersDisplay();
+requestNotificationPermission();
