@@ -19,6 +19,12 @@ app.get("/", (req, res) => {
   res.sendFile(join(__dirname, "public", "index.html"));
 });
 
+// Serve service worker
+app.get("/service-worker.js", (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(join(__dirname, "public", "service-worker.js"));
+});
+
 // listen for client connections
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -38,10 +44,16 @@ io.on("connection", (socket) => {
   socket.on("message-from-client", (msg) => {
     console.log(`Message from ${socket.id}: ${msg}`);
     
-    // Broadcast the message to ALL clients (including sender) with sender ID
-    io.emit("message-from-server", {
+    // Send message to all OTHER clients (not the sender)
+    socket.broadcast.emit("message-from-server", {
       message: msg,
       senderId: socket.id
+    });
+    
+    // Send notification event to ALL clients (including sender) for browser notification
+    io.emit("new-message-notification", {
+      senderName: socket.id.substring(0, 8),
+      message: msg
     });
   });
 

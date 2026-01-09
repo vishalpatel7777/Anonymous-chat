@@ -12,20 +12,50 @@ let connectedUsers = new Set();
 
 // Request notification permission on load
 function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+  
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((reg) => {
+        console.log('Service Worker registered successfully');
+      })
+      .catch((err) => {
+        console.log('Service Worker registration failed:', err);
+      });
   }
 }
 
-// Show browser notification
-function showNotification(title, options = {}) {
+// Show system notification
+function showNotification(senderName, message) {
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, {
+    const title = `New Message from ${senderName}...`;
+    const options = {
+      body: message.substring(0, 100),
       icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%234CAF50"/><text x="50" y="60" font-size="50" text-anchor="middle" fill="white" font-weight="bold">💬</text></svg>',
-      tag: 'chat-notification',
-      requireInteraction: true,
-      ...options
-    });
+      tag: 'chat-message',
+      requireInteraction: true
+    };
+
+    // Try to use service worker
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: title,
+        options: options
+      });
+    } else {
+      // Fallback to direct notification
+      try {
+        new Notification(title, options);
+      } catch (e) {
+        console.log('Notification failed:', e);
+      }
+    }
   }
 }
 
@@ -82,6 +112,8 @@ function updateUsersDisplay() {
   
   // Add each user
   connectedUsers.forEach(userId => {
+    if (!userId) return; // Skip undefined users
+    
     const userDiv = document.createElement('div');
     userDiv.className = 'user-item';
     
@@ -132,7 +164,7 @@ socket.on('users-list', (users) => {
   updateUsersDisplay();
 });
 
-// receive message from server with sender ID and show notification to ALL users
+// Receive message from OTHER users and display in chat
 socket.on('message-from-server', (data) => {
   if (typeof data === 'string') {
     // Old format - just text (welcome message)
@@ -140,13 +172,12 @@ socket.on('message-from-server', (data) => {
   } else {
     // New format - object with message and senderId
     addMessage(data.message, 'server', data.senderId);
-    
-    // Show notification to EVERYONE (including sender)
-    showNotification(`New Message - ${data.senderId.substring(0, 8)}...`, {
-      body: data.message.substring(0, 100) + (data.message.length > 100 ? '...' : ''),
-      tag: 'chat-message-' + Date.now()
-    });
   }
+});
+
+// Listen for notification event - shows popup on ALL users
+socket.on('new-message-notification', (data) => {
+  showNotification(data.senderName, data.message);
 });
 
 // send message to server on button click or Enter key
@@ -180,6 +211,9 @@ socket.on('greeting', (msg, ackCallback) => {
 });
 
 // Initialize - add current user and request notification permission
-connectedUsers.add(socket.id);
-updateUsersDisplay();
+socket.on('connect', () => {
+  connectedUsers.add(socket.id);
+  updateUsersDisplay();
+});
+
 requestNotificationPermission();
