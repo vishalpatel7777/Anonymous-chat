@@ -38,8 +38,8 @@ io.on("connection", (socket) => {
   socket.on("message-from-client", (msg) => {
     console.log(`Message from ${socket.id}: ${msg}`);
     
-    // Broadcast the message to all other clients with sender ID
-    socket.broadcast.emit("message-from-server", {
+    // Broadcast the message to ALL clients (including sender) with sender ID
+    io.emit("message-from-server", {
       message: msg,
       senderId: socket.id
     });
